@@ -1,0 +1,27 @@
+---
+packages:
+  - openstack-octavia-api
+  - openstack-octavia-worker
+  - openstack-octavia-health-manager
+  - openstack-octavia-housekeeping
+  - python3-octavia
+  - python3-octaviaclient
+
+mariadb_service_socket: "/var/lib/mysql/mysql.sock"
+
+os_service_init:
+ - {dest: "/etc/dhcp/octavia/dhclient.conf", mode: "0644"}
+ - {dest: "/etc/systemd/network/o-hm0.network", mode: "0644"}
+ - {dest: "/etc/systemd/system/octavia-interface.service", mode: "0644"}
+
+os_conf_dir: "/etc/octavia"
+os_service_conf: 
+  - {dest: "{{ os_conf_dir }}/octavia.conf", mode: "0644"}
+  - {dest: "/opt/octavia-interface.sh", mode: "0755"}
+
+os_systemd_service_name:
+  - octavia-api.service
+  - octavia-worker.service
+  - octavia-health-manager.service
+  - octavia-housekeeping.service
+...

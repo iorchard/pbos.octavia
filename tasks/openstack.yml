@@ -1,0 +1,97 @@
+---
+- name: OpenStack | create user
+  openstack.cloud.identity_user:
+    cloud: pbos
+    name: "{{ os_service_name }}"
+    password: "{{ os_password }}"
+    domain: default
+    default_project: service
+    state: present
+  register: create_user_retval
+  delegate_to: "{{ groups['keystone'][0] }}"
+  run_once: true
+  no_log: true
+
+- name: OpenStack | set fact for service project id
+  ansible.builtin.set_fact:
+    service_project_id: "{{ create_user_retval.user.default_project_id }}"
+
+- name: OpenStack | add admin role to user
+  openstack.cloud.role_assignment:
+    cloud: pbos
+    user: "{{ os_service_name }}"
+    role: admin
+    project: service
+    state: present
+  delegate_to: "{{ groups['keystone'][0] }}"
+  run_once: true
+
+- name: OpenStack | create service
+  openstack.cloud.catalog_service:
+    cloud: pbos
+    name: "{{ item.name }}"
+    service_type: "{{ item.type }}"
+    description: OpenStack LB as a Service
+    state: present
+  delegate_to: "{{ groups['keystone'][0] }}"
+  run_once: true
+  loop:
+    - {name: "{{ os_service_name }}", type: "load-balancer"}
+
+- name: OpenStack | create endpoints for service
+  openstack.cloud.endpoint:
+    cloud: pbos
+    service: "{{ os_service_name }}"
+    endpoint_interface: "{{ item }}"
+    url: "http://{{ keepalived_vip }}:{{ octavia_port }}/v1"
+    region: RegionOne
+    state: present
+  loop: "{{ os_endpoint_interface }}"
+  delegate_to: "{{ groups['keystone'][0] }}"
+  run_once: true
+
+- name: OpenStack | create octaviarc file
+  ansible.builtin.template:
+    dest: "{{ ansible_env.HOME }}/.octaviarc"
+    src: "octaviarc.j2"
+    mode: "0600"
+
+- name: OpenStack | create clouds.yaml
+  ansible.builtin.template:
+    dest: "{{ ansible_env.HOME }}/.config/openstack/clouds.yaml"
+    src: "clouds.yaml.j2"
+    mode: "0600"
+  delegate_to: "{{ groups['keystone'][0] }}"
+  run_once: true
+
+- name: OpenStack | upload amphora image
+  openstack.cloud.image:
+    cloud: pbos-octavia
+    name: amphora-x64-haproxy
+    disk_format: qcow2
+    container_format: bare
+    state: present
+    filename: "{{ amphora_image_file }}"
+    tags:
+      - amphora
+    is_public: false
+  delegate_to: "{{ groups['keystone'][0] }}"
+  run_once: true
+
+- name: OpenStack | create amphora flavor
+  openstack.cloud.compute_flavor:
+    cloud: pbos-octavia
+    name: amphora
+    ram: 1024
+    vcpus: 1
+    disk: 2
+    is_public: false
+    state: present
+  register: result
+  delegate_to: "{{ groups['keystone'][0] }}"
+  run_once: true
+
+- name: OpenStack | set fact for amphora flavor id
+  ansible.builtin.set_fact:
+    amp_flavor_id: "{{ result.flavor.id }}"
+...

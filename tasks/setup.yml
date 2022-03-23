@@ -1,0 +1,117 @@
+---
+- name: Setup | create security group
+  openstack.cloud.security_group:
+    cloud: pbos-octavia
+    name: "{{ item.name }}"
+    description: "{{ item.desc }}"
+  loop: "{{ octavia_sec_grp }}"
+  delegate_to: "{{ groups['keystone'][0] }}"
+  run_once: true
+
+- name: Setup | get lb-mgmt-sec-grp info
+  openstack.cloud.security_group_info:
+    cloud: pbos-octavia
+    name: "lb-mgmt-sec-grp"
+  register: result
+
+- name: Setup | set_fact for lb-mgmt-sec-grp id
+  ansible.builtin.set_fact:
+    lb_mgmt_sec_grp_id: "{{ result.security_groups[0].id }}"
+
+- name: Setup | create security group rules
+  openstack.cloud.security_group_rule:
+    cloud: pbos-octavia
+    security_group: "{{ item.name }}"
+    protocol: "{{ item.protocol }}"
+    port_range_min: "{{ item.port }}"
+    port_range_max: "{{ item.port }}"
+  loop: "{{ octavia_sec_grp_rules }}"
+  delegate_to: "{{ groups['keystone'][0] }}"
+  run_once: true
+
+- name: Setup | create amphora ssh key directory
+  ansible.builtin.file:
+    path: "{{ amphora_sshkey_dir }}"
+    state: directory
+    mode: "0700"
+
+- name: Setup | create amphora ssh keys on the first node
+  community.crypto.openssh_keypair:
+    path: "{{ amphora_sshkey_dir }}/amphora_key"
+  delegate_to: "{{ groups['octavia'][0] }}"
+  run_once: true
+
+- name: Setup | get amphora private key from the first node
+  ansible.builtin.slurp:
+    src: "{{ amphora_sshkey_dir }}/amphora_key"
+  register: amphora_ssh_private_key
+  delegate_to: "{{ groups['octavia'][0] }}"
+  run_once: true
+
+- name: Setup | get amphora public key from the first node
+  ansible.builtin.slurp:
+    src: "{{ amphora_sshkey_dir }}/amphora_key.pub"
+  register: amphora_ssh_public_key
+  delegate_to: "{{ groups['octavia'][0] }}"
+  run_once: true
+
+- name: Setup | create amphora public key on other nodes
+  ansible.builtin.copy:
+    dest: "{{ amphora_sshkey_dir }}/{{ item.name }}"
+    content: "{{ item.content }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - {name: "amphora_key.pub", content: "{{ amphora_ssh_public_key.content | b64decode }}", mode: "0644"}
+    - {name: "amphora_key", content: "{{ amphora_ssh_private_key.content | b64decode }}", mode: "0600"}
+  when: inventory_hostname != groups['octavia'][0]
+
+- name: Setup | create openstack key pair
+  openstack.cloud.keypair:
+    cloud: pbos-octavia
+    name: amphorakey
+    state: present
+    public_key_file: "{{ amphora_sshkey_dir }}/amphora_key.pub"
+  delegate_to: "{{ groups['octavia'][0] }}"
+  run_once: true
+
+- name: Setup | create octavia service init directories
+  ansible.builtin.file:
+    path: "{{ item.dest | dirname }}"
+    state: directory
+    mode: "0755"
+  loop: "{{ os_service_init }}"
+  become: true
+
+- name: Setup | copy service init files
+  ansible.builtin.copy:
+    dest: "{{ item.dest }}"
+    src: "{{ ansible_os_family | lower }}{{ item.dest }}"
+    owner: "root"
+    group: "root"
+    mode: "{{ item.mode }}"
+  loop: "{{ os_service_init }}"
+  become: true
+
+- name: Setup | include network setup
+  ansible.builtin.include_tasks: "network.yml"
+
+- name: Setup | template configuration
+  ansible.builtin.template:
+    dest: "{{ item.dest }}"
+    src: "{{ ansible_os_family | lower }}{{ item.dest + '.j2' }}"
+    owner: "root"
+    group: "{{ os_service_name }}"
+    mode: "{{ item.mode }}"
+  loop: "{{ os_service_conf }}"
+  become: true
+  changed_when: true
+  notify:
+    - systemctl restart service
+
+- name: Setup | create db tables
+  ansible.builtin.shell: >-
+    octavia-db-manage --config-file /etc/octavia/octavia.conf upgrade head
+  become: true
+  delegate_to: "{{ groups['octavia'][0] }}"
+  run_once: true
+...

@@ -1,0 +1,23 @@
+---
+clouds:
+  pbos:
+    identity_api_version: 3
+    auth:
+      auth_url: http://{{ keepalived_vip }}:{{ keystone_port }}/v3
+      project_name: admin
+      system_scope: all
+      username: admin
+      password: {{ openstack_admin_password }}
+      user_domain_name: default
+      project_domain_name: default
+    region_name: RegionOne
+  pbos-octavia:
+    auth:
+      auth_url: http://{{ keepalived_vip }}:{{ keystone_port }}
+      project_name: service
+      username: {{ os_service_name }}
+      password: {{ os_password }}
+      user_domain_name: default
+      project_domain_name: default
+    region_name: RegionOne
+...

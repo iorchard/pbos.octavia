@@ -1,0 +1,130 @@
+---
+- name: TLS | check if CA certificate exists
+  ansible.builtin.stat:
+    path: "{{ tls_ca.crt }}"
+  register: p
+  delegate_to: "{{ groups['controller'][0] }}"
+  run_once: true
+  failed_when: p.stat.isreg is defined and p.stat.isreg == False
+
+- name: TLS | create temporary certificate directory
+  ansible.builtin.file:
+    path: "{{ tls_tmp_dir }}"
+    state: directory
+    mode: "0700"
+  delegate_to: "{{ groups['controller'][0] }}"
+  run_once: true
+
+- name: TLS | create client certificate directory
+  ansible.builtin.file:
+    path: "{{ tls_client_dir }}"
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: TLS | copy ca certificate
+  ansible.builtin.copy:
+    dest: "{{ tls_client_dir }}/ca-cert.pem"
+    src: "{{ tls_ca.crt }}"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+  become: true
+
+- name: TLS | get ca key
+  ansible.builtin.slurp:
+    src: "{{ tls_ca.key }}"
+  register: ca_key
+  become: true
+  delegate_to: "{{ groups['controller'][0] }}"
+
+- name: TLS | copy ca key
+  ansible.builtin.copy:
+    content: "{{ ca_key.content | b64decode }}"
+    dest: "{{ tls_client_dir }}/ca-key.pem"
+    mode: "0640"
+    owner: "root"
+    group: "{{ os_service_name }}"
+  become: true
+
+- name: TLS | create private key for client certificate
+  community.crypto.openssl_privatekey:
+    path: "{{ tls_tmp_client.key }}"
+    select_crypto_backend: cryptography
+    type: RSA
+    size: 4096
+  delegate_to: "{{ groups['controller'][0] }}"
+  run_once: true
+
+- name: TLS | create CSR for client certificate
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ tls_tmp_client.key }}"
+    country_name: "{{ tls_subj.country_name }}"
+    state_or_province_name: "{{ tls_subj.state_or_province_name }}"
+    organization_name: "{{ tls_subj.organization_name }}"
+    common_name: "{{ tls_subj.common_name }}"
+    email_address: "{{ tls_subj.email_address }}"
+    use_common_name_for_san: false
+  register: client_csr
+  delegate_to: "{{ groups['controller'][0] }}"
+  run_once: true
+
+- name: TLS | check if client certificate exists
+  ansible.builtin.stat:
+    path: "{{ tls_client_cert }}"
+  register: client_cert_exists
+
+- name: TLS | read client certificate if exists
+  ansible.builtin.slurp:
+    src: "{{ tls_client_cert }}"
+  register: client_certificate
+  when:
+    - client_cert_exists.stat.exists
+
+- name: TLS | sign client certificate with CA
+  community.crypto.x509_certificate_pipe:
+    content: "{{ (client_certificate.content | b64decode) if client_cert_exists.stat.exists else omit }}"
+    csr_content: "{{ client_csr.csr }}"
+    provider: ownca
+    ownca_path: "{{ tls_ca.crt }}"
+    ownca_privatekey_path: "{{ tls_ca.key }}"
+    ownca_privatekey_passphrase: "{{ ca_passphrase }}"
+    ownca_not_after: "{{ tls_days }}"
+    ownca_not_before: "+0s"
+  become: true
+  register: client_cert
+  delegate_to: "{{ groups['controller'][0] }}"
+  run_once: true
+
+- name: TLS | write client certificate file
+  ansible.builtin.copy:
+    dest: "{{ tls_client_cert }}"
+    content: "{{ client_cert.certificate }}"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+  become: true
+  when:
+    - client_cert is changed
+
+- name: TLS | copy client key file
+  ansible.builtin.copy:
+    dest: "{{ tls_client_cert_and_key }}"
+    src: "{{ tls_tmp_client.key }}"
+    owner: "root"
+    group: "{{ os_service_name }}"
+    mode: "0640"
+  become: true
+
+- name: TLS | concat client key and certificate file
+  ansible.builtin.shell: >-
+    cat {{ tls_client_cert }} >> {{ tls_client_cert_and_key }}
+  become: true
+
+- name: TLS | remove temporary certificate directory
+  ansible.builtin.file:
+    path: "{{ tls_tmp_dir }}"
+    state: absent
+  delegate_to: "{{ groups['controller'][0] }}"
+  run_once: true
+...

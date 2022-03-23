@@ -1,0 +1,101 @@
+[DEFAULT]
+transport_url = rabbit://openstack:{{ rabbitmq_openstack_password }}@{{ keepalived_vip }}:{{rabbitmq_tls_port }}
+
+[api_settings]
+bind_host = {{ ansible_host }}
+bind_port = {{ octavia_port }}
+
+[database]
+connection = mysql+pymysql://{{ os_service_name }}:{{ db_password }}@{{ keepalived_vip }}/{{ os_service_name }}?charset=utf8&ssl_ca={{ mariadb_ca_cert }}
+
+[health_manager]
+bind_ip = {{ octavia_mgmt_port_ip }}
+bind_port = {{ octavia_health_manager_port }}
+controller_ip_port_list = {{ octavia_mgmt_port_ip }}:{{ octavia_health_manager_port }}
+
+[keystone_authtoken]
+service_token_roles_required = True
+www_authenticate_uri = https://{{ keepalived_vip }}:{{ keystone_port }}
+auth_url = https://{{ keepalived_vip }}:{{ keystone_port }}
+memcached_servers = {{ keepalived_vip }}:{{ memcached_port }}
+auth_type = password
+project_domain_name = Default
+user_domain_name = Default
+project_name = service
+username = {{ os_service_name }}
+password = {{ os_password }}
+
+[certificates]
+cert_generator = local_cert_generator
+server_certs_key_passphrase = {{ server_certs_key_passphrase }}
+ca_private_key_passphrase = {{ ca_passphrase }}
+ca_private_key = {{ tls_client_dir }}/ca-key.pem
+ca_certificate = {{ tls_client_dir }}/ca-cert.pem
+
+[compute]
+
+[networking]
+
+[haproxy_amphora]
+server_ca = {{ tls_client_dir }}/ca-cert.pem
+client_cert = {{ tls_client_cert_and_key }}
+
+[controller_worker]
+amp_image_owner_id = {{ service_project_id }}
+amp_image_tag = amphora
+amp_ssh_key_name = amphorakey
+amp_secgroup_list = {{ lb_mgmt_sec_grp_id }}
+amp_boot_network_list = {{ lb_network_id }}
+amp_flavor_id = {{ amp_flavor_id }}
+network_driver = allowed_address_pairs_driver
+compute_driver = compute_nova_driver
+amphora_driver = amphora_haproxy_rest_driver
+client_ca = {{ tls_client_dir }}/ca-cert.pem
+
+[task_flow]
+
+[oslo_messaging]
+topic = octavia_prov
+
+[oslo_middleware]
+
+[house_keeping]
+
+[amphora_agent]
+
+[keepalived_vrrp]
+
+[service_auth]
+auth_url = http://{{ keepalived_vip }}:{{ keystone_port }}
+memcached_servers = {{ keepalived_vip }}:{{ memcached_port }}
+auth_type = password
+project_domain_name = Default
+user_domain_name = Default
+project_name = service
+username = {{ os_service_name }}
+password = {{ os_password }}
+
+[nova]
+
+[cinder]
+
+[glance]
+
+[neutron]
+
+[quotas]
+default_load_balancer_quota = -1
+default_listener_quota = -1
+default_member_quota = -1
+default_pool_quota = -1
+default_health_monitor_quota = -1
+default_l7policy_quota = -1
+default_l7rule_quota = -1
+
+[audit]
+
+[audit_middleware_notifications]
+
+[driver_agent]
+
+[healthcheck]

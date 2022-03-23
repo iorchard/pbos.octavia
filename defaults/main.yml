@@ -1,0 +1,65 @@
+---
+offline: false
+openstack_release: "wallaby"
+keepalived_vip: ""
+os_service_name: "octavia"
+db_password: "{{ octavia_password }}"
+os_password: "{{ octavia_password }}"
+mariadb_root_password: ~
+openstack_mariadb_acl_cidr: ~
+rabbitmq_openstack_password: ~
+memcached_port: 11211
+keystone_port: 5000
+os_endpoint_interface:
+  - public
+  - internal
+  - admin
+mariadb_ca_cert: "/etc/my.cnf.d/certificates/ca-cert.pem"
+rabbitmq_ca_cert: "/etc/rabbitmq/certificates/ca-cert.pem"
+rabbitmq_tls_port: 5671
+
+amphora_image_file: "{{ ansible_env.HOME }}/amphora-x64-haproxy.qcow2"
+octavia_port: 9876
+octavia_health_manager_port: 5555
+tls_tmp_dir: "/tmp/octavia_tls"
+ca_passphrase: ~
+server_certs_key_passphrase: "{{ octavia_certs_key_passphrase }}"
+tls_subj: {
+  country_name: "KR",
+  state_or_province_name: "Gangwon-Do",
+  locality_name: "Wonju-Si",
+  organization_name: "iOrchard",
+  common_name: "PBOS",
+  email_address: "support@iorchard.co.kr"
+}
+tls_cert_dir: "/etc/pki/pbos"
+tls_ca_dir: "/etc/pki/pbos"
+tls_ca: {
+  key: "{{ tls_ca_dir }}/ca-key.pem",
+  crt: "{{ tls_ca_dir }}/ca-cert.pem"
+}
+tls_tmp_client: {
+  key: "{{ tls_tmp_dir }}/client-key.pem"
+}
+tls_days: "+3650d"
+tls_client_dir: "/etc/octavia/certificates"
+tls_client_cert: "{{ tls_client_dir }}/client-cert.pem"
+tls_client_cert_and_key: "{{ tls_client_dir }}/client-cert-and-key.pem"
+
+octavia_sec_grp: 
+  - {name: "lb-mgmt-sec-grp", desc: "Octavia management security group"}
+  - {name: "lb-health-mgr-sec-grp", desc: "Octavia health manager security group"}
+octavia_sec_grp_rules:
+  - {name: "lb-mgmt-sec-grp", protocol: "icmp", port: -1}
+  - {name: "lb-mgmt-sec-grp", protocol: "tcp", port: 22}
+  - {name: "lb-mgmt-sec-grp", protocol: "tcp", port: 9443}
+  - {name: "lb-health-mgr-sec-grp", protocol: "udp", port: "{{ octavia_health_manager_port }}"}
+amphora_sshkey_dir: "{{ ansible_env.HOME }}/.amphora"
+
+octavia_mgmt_network_name: "lb-mgmt-net"
+octavia_mgmt_subnet_name: "lb-mgmt-subnet"
+octavia_mgmt_subnet_cidr: 172.16.0.0/12
+octavia_mgmt_subnet_start: 172.16.0.100
+octavia_mgmt_subnet_end: 172.16.31.254
+octavia_mgmt_port_ip: 172.16.0.2
+...

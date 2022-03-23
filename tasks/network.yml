@@ -1,0 +1,117 @@
+---
+- name: Network | create LB network
+  openstack.cloud.network:
+    cloud: pbos-octavia
+    name: "{{ octavia_mgmt_network_name }}"
+    state: present
+  delegate_to: "{{ groups['controller'][0] }}"
+  run_once: true
+
+- name: Network | get LB network info
+  openstack.cloud.networks_info:
+    cloud: pbos-octavia
+    name: "{{ octavia_mgmt_network_name }}"
+  register: result
+  delegate_to: "{{ groups['controller'][0] }}"
+  run_once: true
+
+- name: Network | set fact for LB network id
+  ansible.builtin.set_fact:
+    lb_network_id: "{{ result.openstack_networks[0].id }}"
+
+- name: Network | create LB subnet
+  openstack.cloud.subnet:
+    cloud: pbos-octavia
+    network_name: "{{ octavia_mgmt_network_name }}"
+    name: "{{ octavia_mgmt_subnet_name }}"
+    cidr: "{{ octavia_mgmt_subnet_cidr }}"
+    allocation_pool_start: "{{ octavia_mgmt_subnet_start }}"
+    allocation_pool_end: "{{ octavia_mgmt_subnet_end }}"
+    state: present
+  delegate_to: "{{ groups['controller'][0] }}"
+  run_once: true
+
+- name: Network | get LB subnet info
+  openstack.cloud.subnets_info:
+    cloud: pbos-octavia
+    name: "{{ octavia_mgmt_subnet_name }}"
+  register: result
+  delegate_to: "{{ groups['controller'][0] }}"
+  run_once: true
+
+- name: Network | set fact for LB subnet id
+  ansible.builtin.set_fact:
+    lb_subnet_id: "{{ result.openstack_subnets[0].id }}"
+
+- name: Network | create LB mgmt port
+  openstack.cloud.port:
+    cloud: pbos-octavia
+    name: octavia-health-manager-listen-port
+    security_groups: "{{ octavia_sec_grp[1].name }}"
+    network: "{{ octavia_mgmt_network_name }}"
+    device_owner: "Octavia:health-mgr"
+    fixed_ips:
+      - ip_address: "{{ octavia_mgmt_port_ip }}"
+      - subnet_id: "{{ lb_subnet_id }}"
+  delegate_to: "{{ groups['controller'][0] }}"
+  run_once: true
+
+- name: Network | get LB mgmt port info
+  openstack.cloud.port_info:
+    cloud: pbos-octavia
+    port: octavia-health-manager-listen-port
+  register: result
+
+- name: Network | set fact for LB mgmt port mac address
+  ansible.builtin.set_fact:
+    lb_mgmt_port_mac: "{{ result.openstack_ports[0].mac_address }}"
+
+# result 0 - success, 2 - already exists.
+- name: Network | create virtual ethernet devices - o-hm0 and o-bhm0 pair
+  ansible.builtin.shell: >-
+    ip link add o-hm0 type veth peer name o-bhm0
+  register: result
+  become: true
+  failed_when: result.rc not in [0, 2]
+
+- name: Network | check o-bhm0 member of LB mgmt network bridge
+  ansible.builtin.stat:
+    path: "/sys/devices/virtual/net/o-bhm0/brport/bridge"
+  register: is_bridge_member
+
+- name: Network | add o-bhm0 to LB mgmt network bridge
+  ansible.builtin.shell: >-
+    brctl addif brq{{ lb_network_id[:11] }} o-bhm0
+  register: result
+  become: true
+  when: not is_bridge_member.stat.exists
+
+- name: Network | o-bhm0 link up
+  ansible.builtin.shell: >-
+    ip link set o-bhm0 up
+  become: true
+
+- name: Network | set mac address for o-hm0
+  ansible.builtin.shell: >-
+    ip link set dev o-hm0 address {{ lb_mgmt_port_mac }}
+  become: true
+
+- name: Network | set iptables INPUT rule for o-hm0
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: udp
+    destination_port: "{{ octavia_health_manager_port }}"
+    in_interface: o-hm0
+    ctstate: NEW
+    jump: ACCEPT
+    comment: Accept new octavia health manager connection
+    state: present
+  become: true
+
+- name: Network | run dhclient on o-hm0 interface
+  ansible.builtin.shell: >-
+    dhclient -v o-hm0 -cf /etc/dhcp/octavia
+  register: result
+  become: true
+  failed_when: result.rc not in [0, 1]
+...

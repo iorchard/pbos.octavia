@@ -1,0 +1,24 @@
+Listen {{ ansible_host }}:{{ octavia_port }}
+
+<VirtualHost *:{{ octavia_port }}>
+    ServerName {{ inventory_hostname }}
+
+    ErrorLog "/var/log/httpd/octavia_error.log"
+    LogLevel info
+    ServerSignature Off
+    CustomLog "/var/log/httpd/octavia_access.log" combined
+
+    WSGIApplicationGroup %{GLOBAL}
+    WSGIDaemonProcess octavia-wsgi display-name=%{GROUP} group=octavia processes=4 threads=1 user=octavia
+    WSGIProcessGroup octavia-wsgi
+    WSGIScriptAlias / /usr/bin/octavia-wsgi
+    <Directory /usr/bin>
+        <IfVersion >= 2.4>
+            Require all granted
+        </IfVersion>
+        <IfVersion < 2.4>
+            Order allow,deny
+            Allow from all
+        </IfVersion>
+    </Directory>
+</VirtualHost>

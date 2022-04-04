@@ -43,7 +43,7 @@
     cloud: pbos
     service: "{{ os_service_name }}"
     endpoint_interface: "{{ item }}"
-    url: "http://{{ keepalived_vip }}:{{ octavia_port }}/v1"
+    url: "http://{{ keepalived_vip }}:{{ octavia_port }}"
     region: RegionOne
     state: present
   loop: "{{ os_endpoint_interface }}"

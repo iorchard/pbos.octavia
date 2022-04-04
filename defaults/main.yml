@@ -24,6 +24,7 @@ octavia_health_manager_port: 5555
 tls_tmp_dir: "/tmp/octavia_tls"
 ca_passphrase: ~
 server_certs_key_passphrase: "{{ octavia_certs_key_passphrase }}"
+heartbeat_key: "{{ octavia_heartbeat_key }}"
 tls_subj: {
   country_name: "KR",
   state_or_province_name: "Gangwon-Do",

@@ -25,6 +25,9 @@
     network_name: "{{ octavia_mgmt_network_name }}"
     name: "{{ octavia_mgmt_subnet_name }}"
     cidr: "{{ octavia_mgmt_subnet_cidr }}"
+    no_gateway_ip: true
+    dns_nameservers:
+      - 8.8.8.8
     allocation_pool_start: "{{ octavia_mgmt_subnet_start }}"
     allocation_pool_end: "{{ octavia_mgmt_subnet_end }}"
     state: present

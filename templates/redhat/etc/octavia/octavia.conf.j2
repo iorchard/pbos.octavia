@@ -12,11 +12,12 @@ connection = mysql+pymysql://{{ os_service_name }}:{{ db_password }}@{{ keepaliv
 bind_ip = {{ octavia_mgmt_port_ip }}
 bind_port = {{ octavia_health_manager_port }}
 controller_ip_port_list = {{ octavia_mgmt_port_ip }}:{{ octavia_health_manager_port }}
+heartbeat_key = {{ heartbeat_key }}
 
 [keystone_authtoken]
 service_token_roles_required = True
-www_authenticate_uri = https://{{ keepalived_vip }}:{{ keystone_port }}
-auth_url = https://{{ keepalived_vip }}:{{ keystone_port }}
+www_authenticate_uri = http://{{ keepalived_vip }}:{{ keystone_port }}
+auth_url = http://{{ keepalived_vip }}:{{ keystone_port }}
 memcached_servers = {{ keepalived_vip }}:{{ memcached_port }}
 auth_type = password
 project_domain_name = Default
@@ -56,6 +57,11 @@ client_ca = {{ tls_client_dir }}/ca-cert.pem
 
 [oslo_messaging]
 topic = octavia_prov
+
+[oslo_messaging_rabbit]
+ssl=true
+ssl_version=TLSv1_2
+ssl_ca_file={{ rabbitmq_ca_cert }}
 
 [oslo_middleware]
 

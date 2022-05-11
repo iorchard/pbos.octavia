@@ -56,13 +56,16 @@
     src: "octaviarc.j2"
     mode: "0600"
 
+- name: Setup | create directory for clouds.yaml
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.config/openstack"
+    state: directory
+
 - name: OpenStack | create clouds.yaml
   ansible.builtin.template:
     dest: "{{ ansible_env.HOME }}/.config/openstack/clouds.yaml"
     src: "clouds.yaml.j2"
     mode: "0600"
-  delegate_to: "{{ groups['keystone'][0] }}"
-  run_once: true
 
 - name: OpenStack | upload amphora image
   openstack.cloud.image:

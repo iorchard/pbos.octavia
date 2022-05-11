@@ -11,10 +11,11 @@ if [ "$1" == "start" ]; then
   ip link set o-bhm0 up
   ip link set dev o-hm0 address $MAC
   ip link set o-hm0 up
+  ip address add {{ octavia_mgmt_port_ip | ansible.netcommon.ipmath(ansible_loop.index0) }}/12 dev o-hm0
   iptables -I INPUT -i o-hm0 -p udp --dport 5555 -j ACCEPT
 elif [ "$1" == "stop" ]; then
   ip link del o-hm0
 else
   brctl show $BRNAME
-  ip a s dev o-hm0
+  ip address show dev o-hm0
 fi

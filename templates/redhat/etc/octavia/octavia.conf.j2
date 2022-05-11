@@ -11,7 +11,7 @@ connection = mysql+pymysql://{{ os_service_name }}:{{ db_password }}@{{ keepaliv
 [health_manager]
 bind_ip = {{ octavia_mgmt_port_ip }}
 bind_port = {{ octavia_health_manager_port }}
-controller_ip_port_list = {{ octavia_mgmt_port_ip }}:{{ octavia_health_manager_port }}
+controller_ip_port_list = {{ octavia_controller_ip_port_list }}
 heartbeat_key = {{ heartbeat_key }}
 
 [keystone_authtoken]

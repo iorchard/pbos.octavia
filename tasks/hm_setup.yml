@@ -1,0 +1,119 @@
+---
+- name: Health Manager Network Setup | create LB mgmt port
+  openstack.cloud.port:
+    cloud: pbos-octavia
+    name: "octavia-health-manager-listen-port-{{ item }}"
+    security_groups: "{{ octavia_sec_grp[1].name }}"
+    network: "{{ octavia_mgmt_network_name }}"
+    device_owner: "Octavia:health-mgr"
+    fixed_ips:
+      - ip_address: "{{ octavia_mgmt_port_ip | ansible.netcommon.ipmath(ansible_loop.index0) }}"
+      - subnet_id: "{{ lb_subnet_id }}"
+  delegate_to: "{{ item }}"
+  run_once: true
+
+- name: Health Manager Network Setup | get LB mgmt port info
+  openstack.cloud.port_info:
+    cloud: pbos-octavia
+    port: "octavia-health-manager-listen-port-{{ item }}"
+  register: result
+  delegate_to: "{{ item }}"
+  run_once: true
+
+- name: Health Manager Network Setup | set fact for LB mgmt port mac address
+  ansible.builtin.set_fact:
+    lb_mgmt_port_mac: "{{ result.openstack_ports[0].mac_address }}"
+  delegate_to: "{{ item }}"
+  run_once: true
+
+# result 0 - success, 2 - already exists.
+- name: Health Manager Network Setup | create virtual ethernet devices - o-hm0 and o-bhm0 pair
+  ansible.builtin.shell: >-
+    ip link add o-hm0 type veth peer name o-bhm0
+  register: result
+  become: true
+  failed_when: result.rc not in [0, 2]
+  delegate_to: "{{ item }}"
+  run_once: true
+
+- name: Health Manager Network Setup | check o-bhm0 member of LB mgmt network bridge
+  ansible.builtin.stat:
+    path: "/sys/devices/virtual/net/o-bhm0/brport/bridge"
+  register: is_bridge_member
+  delegate_to: "{{ item }}"
+  run_once: true
+
+- name: Health Manager Network Setup | add o-bhm0 to LB mgmt network bridge
+  ansible.builtin.shell: >-
+    brctl addif brq{{ lb_network_id[:11] }} o-bhm0
+  register: result
+  become: true
+  when: not is_bridge_member.stat.exists
+  delegate_to: "{{ item }}"
+  run_once: true
+
+- name: Health Manager Network Setup | o-bhm0 link up
+  ansible.builtin.shell: >-
+    ip link set o-bhm0 up
+  become: true
+  delegate_to: "{{ item }}"
+  run_once: true
+
+- name: Health Manager Network Setup | set mac address for o-hm0
+  ansible.builtin.shell: >-
+    ip link set dev o-hm0 address {{ lb_mgmt_port_mac }}
+  become: true
+  delegate_to: "{{ item }}"
+  run_once: true
+
+- name: Health Manager Network Setup | set iptables INPUT rule for o-hm0
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: udp
+    destination_port: "{{ octavia_health_manager_port }}"
+    in_interface: o-hm0
+    ctstate: NEW
+    jump: ACCEPT
+    comment: Accept new octavia health manager connection
+    state: present
+  become: true
+  delegate_to: "{{ item }}"
+  run_once: true
+
+- name: Health Manager Network Setup | delete ip address on o-hm0 interface
+  ansible.builtin.shell: >-
+    ip address del {{ octavia_mgmt_port_ip | ansible.netcommon.ipmath(ansible_loop.index0) }}/12 dev o-hm0
+  register: result
+  become: true
+  failed_when: result.rc not in [0, 2]
+  delegate_to: "{{ item }}"
+  run_once: true
+
+- name: Health Manager Network Setup | assign ip address on o-hm0 interface
+  ansible.builtin.shell: >-
+    ip address add {{ octavia_mgmt_port_ip | ansible.netcommon.ipmath(ansible_loop.index0) }}/12 dev o-hm0
+  register: result
+  become: true
+  failed_when: result.rc not in [0, 2]
+  delegate_to: "{{ item }}"
+  run_once: true
+
+- name: Health Manager Network Setup | templating octavia-interface.sh
+  ansible.builtin.template:
+    dest: "/opt/octavia-interface.sh"
+    src: "{{ ansible_os_family | lower }}/opt/octavia-interface.sh.j2"
+    owner: "root"
+    group: "root"
+    mode: "0755"
+  become: true
+  delegate_to: "{{ item }}"
+  run_once: true
+
+- name: Health Manager Network Setup | enable octavia-interface service
+  ansible.builtin.service:
+    name: "octavia-interface.service"
+    enabled: true
+  become: true
+  delegate_to: "{{ item }}"
+  run_once: true
+...

@@ -6,6 +6,7 @@ packages:
   - openstack-octavia-housekeeping
   - python3-octavia
   - python3-octaviaclient
+  - bridge-utils
 
 mariadb_service_socket: "/var/lib/mysql/mysql.sock"
 
@@ -18,7 +19,6 @@ os_conf_dir: "/etc/octavia"
 os_service_conf: 
   - {dest: "{{ os_conf_dir }}/octavia.conf", mode: "0644"}
   - {dest: "/etc/httpd/conf.d/wsgi-octavia.conf", mode: "0644"}
-  - {dest: "/opt/octavia-interface.sh", mode: "0755"}
 
 os_systemd_service_name:
   - {name: "httpd.service", state: "reloaded"}

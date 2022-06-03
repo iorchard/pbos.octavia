@@ -8,18 +8,18 @@ os_password: "{{ octavia_password }}"
 mariadb_root_password: ~
 openstack_mariadb_acl_cidr: ~
 rabbitmq_openstack_password: ~
+octavia_port: 9876
 memcached_port: 11211
 keystone_port: 5000
 os_endpoint_interface:
-  - public
-  - internal
-  - admin
+  - { name: 'public', url: "http://{{ keepalived_vip_svc | ternary(keepalived_vip_svc, keepalived_vip) }}:{{ octavia_port }}" }
+  - { name: 'internal', url: "http://{{ keepalived_vip }}:{{ octavia_port }}" }
+  - { name: 'admin', url: "http://{{ keepalived_vip }}:{{ octavia_port }}" }
 mariadb_ca_cert: "/etc/my.cnf.d/certificates/ca-cert.pem"
 rabbitmq_ca_cert: "/etc/rabbitmq/certificates/ca-cert.pem"
 rabbitmq_tls_port: 5671
 
 amphora_image_file: "{{ ansible_env.HOME }}/amphora-x64-haproxy.qcow2"
-octavia_port: 9876
 octavia_health_manager_port: 5555
 tls_tmp_dir: "/tmp/octavia_tls"
 ca_passphrase: ~

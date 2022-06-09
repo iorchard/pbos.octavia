@@ -98,6 +98,22 @@
   delegate_to: "{{ item }}"
   run_once: true
 
+- name: Health Manager Network Setup | kill dhclient process id if it is running
+  ansible.builtin.shell: >-
+    pkill dhclient
+  register: result
+  become: true
+  failed_when: result.rc not in [0, 1]
+  delegate_to: "{{ item }}"
+  run_once: true
+
+- name: Health Manager Network Setup | run dhclient to get ip address
+  ansible.builtin.shell: >-
+    dhclient -v o-hm0 -cf /etc/dhcp/octavia
+  become: true
+  delegate_to: "{{ item }}"
+  run_once: true
+
 - name: Health Manager Network Setup | templating octavia-interface.sh
   ansible.builtin.template:
     dest: "/opt/octavia-interface.sh"

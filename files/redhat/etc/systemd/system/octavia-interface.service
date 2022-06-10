@@ -1,7 +1,7 @@
 [Unit]
 Description=Octavia Interface Creator
-Requires=neutron-linuxbridge-agent.service
-After=neutron-linuxbridge-agent.service
+Requires=neutron-linuxbridge-agent.service systemd-networkd.service
+After=neutron-linuxbridge-agent.service systemd-networkd.service
 
 [Service]
 Type=oneshot

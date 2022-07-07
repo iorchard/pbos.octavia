@@ -61,11 +61,21 @@
     path: "{{ ansible_env.HOME }}/.config/openstack"
     state: directory
 
-- name: OpenStack | create clouds.yaml
-  ansible.builtin.template:
-    dest: "{{ ansible_env.HOME }}/.config/openstack/clouds.yaml"
-    src: "clouds.yaml.j2"
-    mode: "0600"
+- name: OpenStack | add octavia credential to clouds.yaml
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_env.HOME }}/.config/openstack/clouds.yaml"
+    insertbefore: "..."
+    marker: "# {mark} OCTAVIA CREDENTIAL BLOCK"
+    block: >2-
+        pbos-octavia:
+          auth:
+            auth_url: http://{{ keepalived_vip }}:{{ keystone_port }}
+            project_name: service
+            username: {{ os_service_name }}
+            password: {{ os_password }}
+            user_domain_name: default
+            project_domain_name: default
+          region_name: RegionOne
 
 - name: OpenStack | upload amphora image
   openstack.cloud.image:

@@ -64,7 +64,8 @@
 - name: OpenStack | add octavia credential to clouds.yaml
   ansible.builtin.blockinfile:
     path: "{{ ansible_env.HOME }}/.config/openstack/clouds.yaml"
-    insertbefore: "..."
+    mode: "0600"
+    insertafter: EOF
     marker: "# {mark} OCTAVIA CREDENTIAL BLOCK"
     block: >2-
         pbos-octavia:

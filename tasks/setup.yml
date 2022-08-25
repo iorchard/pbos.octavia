@@ -64,6 +64,7 @@
     - {name: "amphora_key.pub", content: "{{ amphora_ssh_public_key.content | b64decode }}", mode: "0644"}
     - {name: "amphora_key", content: "{{ amphora_ssh_private_key.content | b64decode }}", mode: "0600"}
   when: inventory_hostname != groups['octavia'][0]
+  no_log: true
 
 - name: Setup | create openstack key pair
   openstack.cloud.keypair:

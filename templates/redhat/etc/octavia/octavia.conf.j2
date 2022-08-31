@@ -1,5 +1,6 @@
 [DEFAULT]
 transport_url = rabbit://openstack:{{ rabbitmq_openstack_password }}@{{ keepalived_vip }}:{{rabbitmq_tls_port }}
+log_dir = /var/log/{{ os_service_name }}
 
 [api_settings]
 bind_host = {{ ansible_host }}
@@ -59,9 +60,10 @@ client_ca = {{ tls_client_dir }}/ca-cert.pem
 topic = octavia_prov
 
 [oslo_messaging_rabbit]
-ssl=true
-ssl_version=TLSv1_2
-ssl_ca_file={{ rabbitmq_ca_cert }}
+ssl = true
+ssl_version = TLSv1_2
+ssl_ca_file = {{ rabbitmq_ca_cert }}
+rabbit_quorum_queue = True
 
 [oslo_middleware]
 

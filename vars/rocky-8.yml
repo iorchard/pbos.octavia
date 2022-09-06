@@ -8,6 +8,7 @@ packages:
   - python3-octaviaclient
   - bridge-utils
   - systemd-networkd
+  - dhcp-client
 
 mariadb_service_socket: "/var/lib/mysql/mysql.sock"
 

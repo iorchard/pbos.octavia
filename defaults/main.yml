@@ -59,7 +59,8 @@ amphora_sshkey_dir: "{{ ansible_env.HOME }}/.amphora"
 
 octavia_mgmt_network_name: "lb-mgmt-net"
 octavia_mgmt_subnet_name: "lb-mgmt-subnet"
-octavia_mgmt_subnet_cidr: 172.16.0.0/12
+octavia_mgmt_subnet_mask: "12"
+octavia_mgmt_subnet_cidr: "172.16.0.0/{{ octavia_mgmt_subnet_mask }}"
 octavia_mgmt_subnet_start: 172.16.0.100
 octavia_mgmt_subnet_end: 172.16.31.254
 octavia_mgmt_port_ip: 172.16.0.2

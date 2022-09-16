@@ -82,7 +82,7 @@
 
 - name: Health Manager Network Setup | delete ip address on o-hm0 interface
   ansible.builtin.shell: >-
-    ip address del {{ octavia_mgmt_port_ip | ansible.netcommon.ipmath(ansible_loop.index0) }}/12 dev o-hm0
+    ip address del {{ octavia_mgmt_port_ip | ansible.netcommon.ipmath(ansible_loop.index0) }}/{{ octavia_mgmt_subnet_mask }} dev o-hm0
   register: result
   become: true
   failed_when: result.rc not in [0, 2]
@@ -91,7 +91,7 @@
 
 - name: Health Manager Network Setup | assign ip address on o-hm0 interface
   ansible.builtin.shell: >-
-    ip address add {{ octavia_mgmt_port_ip | ansible.netcommon.ipmath(ansible_loop.index0) }}/12 dev o-hm0
+    ip address add {{ octavia_mgmt_port_ip | ansible.netcommon.ipmath(ansible_loop.index0) }}/{{ octavia_mgmt_subnet_mask }} dev o-hm0
   register: result
   become: true
   failed_when: result.rc not in [0, 2]

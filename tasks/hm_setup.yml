@@ -107,12 +107,12 @@
   delegate_to: "{{ item }}"
   run_once: true
 
-- name: Health Manager Network Setup | run dhclient to get ip address
-  ansible.builtin.shell: >-
-    dhclient -v o-hm0 -cf /etc/dhcp/octavia
-  become: true
-  delegate_to: "{{ item }}"
-  run_once: true
+#- name: Health Manager Network Setup | run dhclient to get ip address
+#  ansible.builtin.shell: >-
+#    dhclient -v o-hm0 -cf /etc/dhcp/octavia
+#  become: true
+#  delegate_to: "{{ item }}"
+#  run_once: true
 
 - name: Health Manager Network Setup | templating octavia-interface.sh
   ansible.builtin.template:
@@ -132,4 +132,20 @@
   become: true
   delegate_to: "{{ item }}"
   run_once: true
+
+- name: Setup | template configuration
+  ansible.builtin.template:
+    dest: "{{ os_conf_dir }}/octavia.conf"
+    src: "{{ ansible_os_family | lower }}{{ os_conf_dir }}/octavia.conf.j2"
+    owner: "root"
+    group: "{{ os_service_name }}"
+    mode: "0640"
+  become: true
+  changed_when: true
+  delegate_to: "{{ item }}"
+  run_once: true
+  notify:
+    - systemctl restart service
+  vars:
+    hm_bind_ip: "{{ octavia_mgmt_port_ip | ansible.netcommon.ipmath(ansible_loop.index0) }}"
 ...

@@ -19,7 +19,6 @@ os_service_init:
 
 os_conf_dir: "/etc/octavia"
 os_service_conf: 
-  - {dest: "{{ os_conf_dir }}/octavia.conf", mode: "0640"}
   - {dest: "/etc/httpd/conf.d/wsgi-octavia.conf", mode: "0640"}
 
 os_systemd_service_name:

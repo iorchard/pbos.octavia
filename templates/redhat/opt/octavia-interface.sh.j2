@@ -3,15 +3,17 @@
 MAC={{ lb_mgmt_port_mac }}
 BRNAME=brq{{ lb_network_id[:11] }}
 
+SLEEP={{ octavia_iface_sleep_interval }}
+RETRIES={{ octavia_iface_retries }}
 if [ "$1" == "start" ]; then
-  # check if BRNAME exists up to 30 seconds.
+  # check if BRNAME exists up to SLEEP*RETRIES seconds.
   i=0
   until [ -d /sys/devices/virtual/net/$BRNAME ]; do
-    if [ "$i" = "10" ]; then
+    if [ "$i" = "$RETRIES" ]; then
       echo "Abort: $BRNAME does not exist."
       exit 1
     fi
-    sleep 3
+    sleep $SLEEP
     ((i++))
   done
   ip link add o-hm0 type veth peer name o-bhm0

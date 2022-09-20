@@ -65,4 +65,6 @@ octavia_mgmt_subnet_start: 172.16.0.100
 octavia_mgmt_subnet_end: 172.16.31.254
 octavia_mgmt_port_ip: 172.16.0.2
 octavia_controller_ip_port_list: "{% for h in groups['octavia'] %}{{ octavia_mgmt_port_ip | ansible.netcommon.ipmath(loop.index0) }}:{{ octavia_health_manager_port }}{% if loop.index != loop.length %},{% endif %}{% endfor %}"
+octavia_iface_sleep_interval: 3
+octavia_iface_retries: 40
 ...

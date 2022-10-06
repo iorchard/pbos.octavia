@@ -67,4 +67,11 @@ octavia_mgmt_port_ip: 172.16.0.2
 octavia_controller_ip_port_list: "{% for h in groups['octavia'] %}{{ octavia_mgmt_port_ip | ansible.netcommon.ipmath(loop.index0) }}:{{ octavia_health_manager_port }}{% if loop.index != loop.length %},{% endif %}{% endfor %}"
 octavia_iface_sleep_interval: 3
 octavia_iface_retries: 40
+# oslo messaging rabbit config
+rabbit_retry_interval: 1
+rabbit_retry_backoff: 2
+rabbit_interval_max: 300
+rabbit_quorum_queue: True
+heartbeat_timeout_threshold: 60
+heartbeat_rate: 2
 ...

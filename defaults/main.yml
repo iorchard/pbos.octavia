@@ -74,4 +74,6 @@ rabbit_interval_max: 300
 rabbit_quorum_queue: True
 heartbeat_timeout_threshold: 60
 heartbeat_rate: 2
+# nova: AZ for amphorae
+nova_az: nova
 ...
